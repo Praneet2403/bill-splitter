@@ -1,0 +1,31 @@
+erDiagram
+    homes ||--o{ members : has
+    homes ||--o{ bills : has
+    bills ||--|{ shares : "split into"
+    members ||--o{ shares : owes
+
+    homes {
+        text id PK
+        text name "not blank"
+    }
+    members {
+        text id PK
+        text home_id FK
+        text name "not blank"
+        int position "unique per home"
+    }
+    bills {
+        text id PK
+        text home_id FK
+        text title
+        int total_cents "integer, > 0"
+        text created_at
+    }
+    shares {
+        text id PK
+        text bill_id FK
+        text member_id FK
+        int amount_cents "integer, >= 0"
+        text paid_at "null until paid"
+        text idempotency_key "set together with paid_at"
+    }

@@ -1,0 +1,7 @@
+flowchart LR
+    U["Browser"] --> V["Vercel<br/>static React app"]
+    V -- "/api/* rewrite" --> R
+    subgraph CF["Cloudflare Worker · Hono"]
+        R["routes<br/>HTTP + Zod"] --> S["service<br/>rules"] --> Q["repo<br/>SQL"]
+    end
+    Q --> D[("D1<br/>SQLite")]

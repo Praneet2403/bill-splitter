@@ -34,16 +34,7 @@ All money is stored as whole paise (integers). `100` paise is ₹1. The API keep
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    U["Browser"] --> V["Vercel<br/>React + Vite + TanStack Router"]
-    V -- "/api/* rewrite" --> W["Cloudflare Worker<br/>Hono"]
-    W --> D[("D1<br/>SQLite")]
-
-    subgraph Worker
-        R["*.routes.ts<br/>HTTP + Zod validation"] --> S["*.service.ts<br/>rules"] --> Q["*.repo.ts<br/>SQL"]
-    end
-```
+<p align="center"><img src="docs/images/architecture.png" alt="Architecture: browser to Vercel to the Cloudflare Worker to D1"></p>
 
 - The web app is a static build on Vercel. `web/vercel.json` forwards `/api/*` to the Worker, so the browser only ever talks to one origin.
 - Each API feature lives in `api/src/modules/<feature>/`. Routes parse and validate, services hold the rules, repos hold the SQL.
@@ -51,63 +42,13 @@ flowchart LR
 
 ## Data model
 
-```mermaid
-erDiagram
-    homes ||--o{ members : has
-    homes ||--o{ bills : has
-    bills ||--|{ shares : "split into"
-    members ||--o{ shares : owes
-
-    homes {
-        text id PK
-        text name "not blank"
-    }
-    members {
-        text id PK
-        text home_id FK
-        text name "not blank"
-        int position "unique per home"
-    }
-    bills {
-        text id PK
-        text home_id FK
-        text title
-        int total_cents "integer, > 0"
-        text created_at
-    }
-    shares {
-        text id PK
-        text bill_id FK
-        text member_id FK
-        int amount_cents "integer, >= 0"
-        text paid_at "null until paid"
-        text idempotency_key "set together with paid_at"
-    }
-```
+<p align="center"><img src="docs/images/data-model.png" width="560" alt="Data model: homes, members, bills and shares"></p>
 
 ## Paying a share
 
 Two requests try to pay the same share at the same time with different keys. One conditional `UPDATE` decides who wins.
 
-```mermaid
-sequenceDiagram
-    participant A as Request A (key k1)
-    participant B as Request B (key k2)
-    participant W as Worker
-    participant D as D1
-
-    A->>W: POST /bills/:id/shares/:id/pay
-    B->>W: POST /bills/:id/shares/:id/pay
-    W->>D: UPDATE shares SET paid_at, key=k1<br/>WHERE id=? AND paid_at IS NULL RETURNING *
-    D-->>W: 1 row
-    W-->>A: 200 { paidAt }
-    W->>D: same UPDATE with key=k2
-    D-->>W: 0 rows (already paid)
-    W->>D: SELECT the share
-    D-->>W: paid with k1
-    W-->>B: 409 already paid with a different key
-    Note over A,W: If A sends k1 again, the read finds k1<br/>and it gets the same 200 back (replay)
-```
+<p align="center"><img src="docs/images/pay-sequence.png" alt="Two requests paying the same share at the same time"></p>
 
 | Request                     | Share state             | Answer                   |
 | --------------------------- | ----------------------- | ------------------------ |
@@ -198,7 +139,8 @@ web/src/
   components/ui/           Button, Sheet, Avatar, loading / empty / error states
   features/<feature>/      home, bills, payments
   routes/                  / (create a home) and /homes/$homeId (the bills page)
-docs/images/               screenshots used in this README
+docs/images/               screenshots and diagrams used in this README
+docs/diagrams/             Mermaid source for each diagram
 ```
 
 ## Run it locally

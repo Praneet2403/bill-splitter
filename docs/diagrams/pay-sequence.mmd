@@ -1,0 +1,17 @@
+sequenceDiagram
+    participant A as Request A (key k1)
+    participant B as Request B (key k2)
+    participant W as Worker
+    participant D as D1
+
+    A->>W: POST /bills/:id/shares/:id/pay
+    B->>W: POST /bills/:id/shares/:id/pay
+    W->>D: UPDATE shares SET paid_at, key=k1<br/>WHERE id=? AND paid_at IS NULL RETURNING *
+    D-->>W: 1 row
+    W-->>A: 200 { paidAt }
+    W->>D: same UPDATE with key=k2
+    D-->>W: 0 rows (already paid)
+    W->>D: SELECT the share
+    D-->>W: paid with k1
+    W-->>B: 409 already paid with a different key
+    Note over A,W: If A sends k1 again, the read finds k1<br/>and it gets the same 200 back (replay)
