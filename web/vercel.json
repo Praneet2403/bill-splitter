@@ -1,8 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "npx pnpm@12.16.1 install",
-  "buildCommand": "npx pnpm@12.16.1 --filter bill-splitter-web build",
-  "outputDirectory": "web/dist",
+  "buildCommand": "npx pnpm@12.16.1 build",
+  "outputDirectory": "dist",
   "rewrites": [
     {
       "source": "/api/:path*",
