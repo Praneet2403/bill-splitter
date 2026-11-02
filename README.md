@@ -155,3 +155,50 @@ You must understand every line you submit. We check this with your video and in 
 5. Paste the repository link and the video link in the application form.
 
 We will run `pnpm install && pnpm check && pnpm typecheck && pnpm test` on your repository.
+
+## Decisions
+
+1. **One conditional `UPDATE` is the payment lock.**
+   `UPDATE shares SET paid_at = ?, idempotency_key = ? WHERE id = ? AND bill_id = ? AND paid_at IS NULL RETURNING ...`.
+   SQLite runs writes one after another, so if two requests race, only the first one matches a row.
+   The loser reads the share: same key → replay the first answer (200), different key → 409.
+   No read-then-write gap, no locks to hold. The key is stored on the share, and
+   `chk_shares_paid_has_key` makes "paid without a key" impossible.
+
+2. **Raw SQL with D1, no ORM.** The tricky rules (atomic pay, member order, balances) are each one
+   SQL statement I can read and explain. A bill and its shares are saved with `db.batch()`,
+   which D1 runs as one transaction, so a bill can never exist with missing shares.
+   Member order is an explicit `position` column (`UNIQUE (home_id, position)`), computed inside
+   the `INSERT` itself, not a timestamp that two inserts could share.
+
+3. **The web page only shows "Paid" after the server says so.** No optimistic update: a failed
+   payment leaves the share unpaid with an error under it. Every request has a 10 s timeout and
+   turns any failure into one `HttpError`, so a 500 or a slow API shows a message, never a crash.
+   The `Idempotency-Key` is kept after a timeout, so pressing Pay again cannot pay twice.
+
+### Constraints in `api/migrations/0001_init.sql`
+
+| Constraint                                                               | Stops                                                       |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------- |
+| `fk_members_home`, `fk_bills_home`, `fk_shares_bill`, `fk_shares_member` | rows pointing at a home, bill or member that does not exist |
+| `chk_bills_total_positive`                                               | a bill of 0, negative or non-integer cents                  |
+| `chk_shares_amount_not_negative`                                         | a negative or non-integer share                             |
+| `uq_shares_bill_member`                                                  | two shares for the same member on one bill                  |
+| `uq_members_home_position`                                               | two members with the same place in the join order           |
+| `chk_shares_paid_has_key`                                                | a paid share without the key that paid it (or the reverse)  |
+| `chk_homes_name_not_blank`, `chk_members_name_not_blank`                 | blank names                                                 |
+
+### Folder structure
+
+```
+api/src/
+  index.ts                 wires the modules + JSON error handlers
+  lib/                     errors, body validation, shared types
+  modules/<feature>/       *.routes.ts (HTTP) → *.service.ts (rules) → *.repo.ts (SQL)
+web/src/
+  api/                     typed fetchers + TanStack Query hooks
+  lib/                     http (timeout, errors), money (integer cents), storage
+  components/ui/           Button, Sheet, Avatar, loading / empty / error states
+  features/<feature>/      home, bills, payments
+  routes/                  / (create a home) and /homes/$homeId (the bills page)
+```
