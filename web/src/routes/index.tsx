@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { PhoneShell, WhitePanel } from '../components/ui/PhoneShell'
 import { CreateHomeForm } from '../features/home/CreateHomeForm'
+import { SavedHomes } from '../features/home/SavedHomes'
 
 export const Route = createFileRoute('/')({ component: StartPage })
 
@@ -21,6 +22,7 @@ function StartPage() {
       </header>
       <WhitePanel title="Create a home">
         <CreateHomeForm />
+        <SavedHomes />
       </WhitePanel>
     </PhoneShell>
   )

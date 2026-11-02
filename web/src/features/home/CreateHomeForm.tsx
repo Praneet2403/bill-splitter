@@ -1,14 +1,12 @@
 import { useMutation } from '@tanstack/react-query'
-import { Link, useNavigate } from '@tanstack/react-router'
+import { useNavigate } from '@tanstack/react-router'
 import { type FormEvent, useState } from 'react'
 import { api } from '../../api/client'
 import { Button } from '../../components/ui/Button'
-import { loadLastHome } from '../../lib/last-home'
 
 export function CreateHomeForm() {
   const [name, setName] = useState('')
   const navigate = useNavigate()
-  const lastHome = loadLastHome()
   const create = useMutation({
     mutationFn: api.createHome,
     onSuccess: (home) => navigate({ to: '/homes/$homeId', params: { homeId: home.id } }),
@@ -42,15 +40,6 @@ export function CreateHomeForm() {
       >
         {create.isPending ? 'Creating…' : 'Create home'}
       </Button>
-      {lastHome && (
-        <Link
-          to="/homes/$homeId"
-          params={{ homeId: lastHome.id }}
-          className="mt-2 text-center text-sm font-medium text-neutral-500 hover:text-neutral-900"
-        >
-          Continue to {lastHome.name} →
-        </Link>
-      )}
     </form>
   )
 }

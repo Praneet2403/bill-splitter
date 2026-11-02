@@ -11,7 +11,7 @@ import { MembersCard } from '../features/home/MembersCard'
 import { PaidScreen } from '../features/payments/PaidScreen'
 import type { PaidInfo } from '../features/payments/ShareRow'
 import { isTemporary } from '../lib/http'
-import { saveLastHome } from '../lib/last-home'
+import { saveHome } from '../lib/saved-homes'
 
 export const Route = createFileRoute('/homes/$homeId')({ component: HomePage })
 
@@ -24,7 +24,7 @@ function HomePage() {
   const closePaid = useCallback(() => setPaid(null), [])
 
   useEffect(() => {
-    if (home.data) saveLastHome(home.data)
+    if (home.data) saveHome(home.data)
   }, [home.data])
 
   if (home.isPending) {
